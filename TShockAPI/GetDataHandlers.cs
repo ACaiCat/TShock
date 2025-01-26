@@ -856,11 +856,11 @@ namespace TShockAPI
 			/// </summary>
 			public int RespawnTimer { get; set; }
 			/// <summary>
-			/// Number Of Deaths PVE
+			/// Player's deaths from PVE.
 			/// </summary>
 			public int NumberOfDeathsPVE { get; set; }
 			/// <summary>
-			/// Number Of Deaths PVP
+			/// Player's deaths from PVP.
 			/// </summary>
 			public int NumberOfDeathsPVP { get; set; }
 			/// <summary>
@@ -2725,7 +2725,6 @@ namespace TShockAPI
 			short numberOfDeathsPVE = args.Data.ReadInt16();
 			short numberOfDeathsPVP = args.Data.ReadInt16();
 			PlayerSpawnContext context = (PlayerSpawnContext)args.Data.ReadByte();
-
 			if (OnPlayerSpawn(args.Player, args.Data, player, spawnx, spawny, respawnTimer, numberOfDeathsPVE, numberOfDeathsPVP, context))
 				return true;
 
@@ -2762,6 +2761,17 @@ namespace TShockAPI
 				args.Player.Dead = true;
 			else
 				args.Player.Dead = false;
+
+			// When the player spawn into world, the numberOfDeathsPVE and numberOfDeathsPVP is not correct on the SSC Server.
+			// Send the data agrain fixed them.
+			if (context == PlayerSpawnContext.SpawningIntoWorld && args.Player.IsLoggedIn )
+			{
+				if(numberOfDeathsPVE != args.TPlayer.numberOfDeathsPVE || numberOfDeathsPVP != args.TPlayer.numberOfDeathsPVP)
+				{
+					args.Player.Spawn(PlayerSpawnContext.SpawningIntoWorld);
+					return true;
+				}
+			}
 			return false;
 		}
 
