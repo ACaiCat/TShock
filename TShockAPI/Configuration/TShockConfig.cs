@@ -55,6 +55,10 @@ namespace TShockAPI.Configuration
 		[Description("Allows stacks in chests to go beyond the stack limit during world loading.")]
 		public bool IgnoreChestStacksOnLoad = false;
 
+		/// <summary>Allows changing of the default world tile provider.</summary>
+		[Description("Allows changing of the default world tile provider.")]
+		public string WorldTileProvider = "default";
+
 		#endregion
 
 
@@ -109,8 +113,8 @@ namespace TShockAPI.Configuration
 		[Description("Enables never ending invasion events. You still need to start the event, such as with the /invade command.")]
 		public bool InfiniteInvasion;
 
-		/// <summary>Sets the PvP mode. Valid types are: "normal", "always", "disabled".</summary>
-		[Description("Sets the PvP mode. Valid types are: \"normal\", \"always\" and \"disabled\".")]
+		/// <summary>Sets the PvP mode. Valid types are: "normal", "always", "pvpwithnoteam", "disabled".</summary>
+		[Description("Sets the PvP mode. Valid types are: \"normal\", \"always\", \"pvpwithnoteam\" and \"disabled\".")]
 		public string PvPMode = "normal";
 
 		/// <summary>Prevents tiles from being placed within SpawnProtectionRadius of the default spawn.</summary>
@@ -316,8 +320,8 @@ namespace TShockAPI.Configuration
 		[Description("The reason given if banning a mediumcore player on death.")]
 		public string MediumcoreBanReason = GetString("Death results in a ban");
 
-		/// <summary>Disbales IP bans by default, if no arguments are passed to the ban command.</summary>
-		[Description("Disbales IP bans by default, if no arguments are passed to the ban command.")]
+		/// <summary>Disables IP bans by default, if no arguments are passed to the ban command.</summary>
+		[Description("Disables IP bans by default, if no arguments are passed to the ban command.")]
 		public bool DisableDefaultIPBan;
 
 		/// <summary>Enable or disable the whitelist based on IP addresses in the whitelist.txt file.</summary>

@@ -78,7 +78,68 @@ Use past tense when adding new entries; sign your name off when you add or chang
   * If there is no section called "Upcoming changes" below this line, please add one with `## Upcoming changes` as the first line, and then a bulleted item directly after with the first change. -->
 
 ## Upcoming changes
-* Your changes could be here!
+* Fixed `/dump-reference-data` mutate the command names. (#2943, @sgkoishi)
+* Added `ParryDamageBuff` (Striking Moment with Brand of the Inferno and shield) for player, updated `CursedInferno` buff for NPC (@sgkoishi, #3005)
+* Changed the use of `Player.active` to `TSPlayer.Active` for consistency. (@sgkoishi, #2939)
+* Fix typo in config for IP bans. (@redchess64)
+* Updated `TShockAPI.NetItem` (@AgaSpace):
+  * Added constructor overload with parameter `Terraria.Item`.
+  * Added the `ToItem` method to get a copy of `Terraria.Item`.
+  * In the constructor `stack` and `prefix` are now optional parameters.
+* Fixed unable to transfer long response body for REST API. (@sgkoishi, #2925)
+* Fixed the `/wind` command not being very helpful. (@punchready)
+* Fixed /help, /me, and /p commands can't work in non-English languages. (@ACaiCat)
+* Added a hook `AccountHooks.AccountGroupUpdate`, which is called when you change the user group. (@AgaSpace)
+
+## TShock 5.2.1
+* Updated `TSPlayer.GodMode`. (@AgaSpace)
+  * Previously the field was used as some kind of dataset changed by /godmode command, but now it is a property that receives/changes data in journey mode.
+* Added the `TSPlayer.Client` property. It allows the developer to get the `RemoteClient` player, without an additional call to `Terraria.Netplay.Clients`. (@AgaSpace)
+* Updated the documentation for the `TSPlayer.SetPvP` method. The `sendMsg` parameter, which is responsible for sending a pvp mode change message, was not documented earlier. (@AgaSpace)
+* Added methods `TSPlayer.KillPlayer` and `TSPlayer.DamagePlayer` for which you can specify the cause (`PlayerDeathReason`) in parameters. (@AgaSpace)
+* Added an error when trying to change a `TSPlayer` team to, say, 9, when there are only 6. (@AgaSpace)
+* Added an error when trying to call the `TSPlayer.SetTeam` method with an argument (team) greater than 5 or less than 0. (@AgaSpace)
+* Added a method `TSPlayer.UpdateSection` with arguments `rectangle` and `isLoaded`, which will load some area from the server to the player. (@AgaSpace)
+* Added a method `TSPlayer.GiveItem`, which has `TShockAPI.NetItem` structure in its arguments. (@AgaSpace)
+* Added a property `TSPlayer.Hostile`, which gets pvp player mode. (@AgaSpace)
+* Fixed bug where when the `UseSqlLogs` config property is true, an empty log file would still get created. (@ZakFahey)
+* Fixed typo in `/gbuff`. (@sgkoishi, #2955)
+* Rewrote the `.dockerignore` file into a denylist. (@timschumi)
+* Added CI for Docker images. (@timschumi)
+* Fixed Cursed Flares kicking players for invalid buff. (@Arthri)
+
+## TShock 5.2
+* An additional option `pvpwithnoteam` is added at `PvPMode` to enable PVP with no team. (@CelestialAnarchy, #2617, @ATFGK)
+* Corrected and updated deserialization of the following packets (@ATFGK):
+  * `ProjectileNew`: Read the third `AI` value.
+    * Before this change, it was previously possible for the projectile damage limit to falsely trigger, such as when using the Terra Balde and Fire Gauntlet together.
+  * `PlayerSpawn`: Read the `NumberOfDeathsPVE` and `NumberOfDeathsPVP` values.
+    * Before this change, the `PlayerSpawnContext` was always read incorrectly, due to the values above being placed in the middle of the existing structure.
+  * `NpcTeleportPortal`: Read the NPC index as a `ushort` instead of a `byte`.
+  * `PlaceObject`: Read the `Random` value.
+    * Before this change, the `Direction` was always read incorrectly, due to the value above being placed in the middle of the existing structure.
+  * `Zones`: Read the `zone5` value.
+  * `PaintTile` and `PaintWall`: Read the `coatTile` and `coatWall` values.
+  * `PlayerHurtV2`: Read the `cooldownCounter` value.
+* Updated `SpawnMsg` to include the `NumberOfDeathsPVE` and `NumberOfDeathsPVP`, and allow them to be optionally used in `TSPlayer.Spawn`. (@ATFGK)
+* Added `WorldTileProvider` to the tshock config with values `default`, `constileation` or `heaptile`. This allows tile providers to be changed in environments where CLI args cannot be altered. See the documentation website for more info about these providers. (@SignatureBeef)
+* Updated the Utils.FindByIdOrName to follow same logic. Now fuzzy match fallback to `StartsWith` and then `Contains`. (@sgkoishi)
+* Added `ShadowCandle` and `BrainOfConfusionBuff` (BoC dodge buff) to the `PlayerAddBuffWhitelist` (@drunderscore)
+* Improved rejection message and code duplication in `OnPlayerBuff`. (@drunderscore)
+  * This will make it so Bouncer rejections regarding `PlayerAddBuff` will now always include the sender index, buff type, receiver index, and time in ticks, allowing much faster triage of buff whitelist issues.
+* Allowed Digging Molecart and bomb fish to break tiles and place tracks. (@sgkoishi)
+* Added built-in package management capabilities for plugins. (@pontaoski)
+* Fixed Super Sponge unable to absorb shimmer. (@sgkoishi, #2833)
+* Increased whitelisted duration of the Mighty Wind (`WindPushed`) buff (from sandstorms). (@drunderscore)
+* Allowed the Hellfire (`OnFire3`) buff. (@drunderscore)
+* Allowed Digging Molecart and bomb fish to break tiles and place tracks (@sgkoishi)
+* Initialized achievements and the `AchievementManager` on the server. This ensures that players cannot cause exceptions to be thrown, chat messages are always logged, and allows achievement names to be localized in the console. Also added a test case for this. (@drunderscore)
+* Allowed multiple test cases to be in TShock's test suite. (@drunderscore)
+* Fixed unable to use Purification/Evil Powder in jungle. (@sgkoishi)
+* Set the `GetDataHandledEventArgs.Player` property for the `SyncTilePicking` data handler. (@drunderscore)
+* Relaxed custom death message restrictions to allow Inferno potions in PvP. (@drunderscore)
+* Allowed Flower Boots to place Ash Flowers on Ash Grass blocks. (@punchready)
+* Removed unnecessary range check that artifically shortened quick stack reach. (@boddyn, #2885, @bcat)
 
 ## TShock 5.1.3
 * Added support for Terraria 1.4.4.9 via OTAPI 3.1.20. (@SignatureBeef)

@@ -45,6 +45,10 @@ using TShockAPI.Localization;
 using TShockAPI.Configuration;
 using Terraria.GameContent.Creative;
 using System.Runtime.InteropServices;
+using MonoMod.Cil;
+using Terraria.Achievements;
+using Terraria.Initializers;
+using Terraria.UI.Chat;
 using TShockAPI.Modules;
 
 namespace TShockAPI
@@ -59,7 +63,7 @@ namespace TShockAPI
 		/// <summary>VersionNum - The version number the TerrariaAPI will return back to the API. We just use the Assembly info.</summary>
 		public static readonly Version VersionNum = Assembly.GetExecutingAssembly().GetName().Version;
 		/// <summary>VersionCodename - The version codename is displayed when the server starts. Inspired by software codenames conventions.</summary>
-		public static readonly string VersionCodename = "Thank you, everyone, for your support of TShock all these years! <3";
+		public static readonly string VersionCodename = "Intensity";
 
 		/// <summary>SavePath - This is the path TShock saves its data in. This path is relative to the TerrariaServer.exe (not in ServerPlugins).</summary>
 		public static string SavePath = "tshock";
@@ -383,6 +387,19 @@ namespace TShockAPI
 				if (Config.Settings.EnableGeoIP && File.Exists(geoippath))
 					Geo = new GeoIPCountry(geoippath);
 
+				// check if a custom tile provider is to be used
+				switch(Config.Settings.WorldTileProvider?.ToLower())
+				{
+					case "heaptile":
+						Log.ConsoleInfo(GetString($"Using {nameof(HeapTile)} for tile implementation"), TraceLevel.Info);
+						Main.tile = new TileProvider();
+						break;
+					case "constileation":
+						Log.ConsoleInfo(GetString($"Using {nameof(ConstileationProvider)} for tile implementation"), TraceLevel.Info);
+						Main.tile = new ConstileationProvider();
+						break;
+				}
+
 				Log.ConsoleInfo(GetString("TShock {0} ({1}) now running.", Version, VersionCodename));
 
 				ServerApi.Hooks.GamePostInitialize.Register(this, OnPostInit);
@@ -411,10 +428,39 @@ namespace TShockAPI
 				Hooks.AccountHooks.AccountDelete += OnAccountDelete;
 				Hooks.AccountHooks.AccountCreate += OnAccountCreate;
 
+				On.Terraria.RemoteClient.Reset += RemoteClient_Reset;
+
 				GetDataHandlers.InitGetDataHandler();
 				Commands.InitCommands();
 
 				EnglishLanguage.Initialize();
+
+				// The AchievementTagHandler expects Main.Achievements to be non-null, which is not normally the case on dedicated servers.
+				// When trying to parse an achievement chat tag, it will instead throw.
+				// The tag is parsed when calling ChatManager.ParseMessage, which is used in TShock when writing chat messages to the
+				// console. Our OnChat handler uses Utils.Broadcast, which will send the message to all connected clients, write the message
+				// to the console and the log. Due to the order of execution, the message ends up being sent to all connected clients, but
+				// throws whilst trying to write to the console, and never gets written to the log.
+				// To solve the issue, we make achievements available on the server, allowing the tag handler to work as expected, and
+				// even allowing the localization of achievement names to appear in the console.
+
+				if (Game != null)
+				{
+					// Initialize the AchievementManager, which is normally only done on clients.
+					Game._achievements = new AchievementManager();
+
+					IL.Terraria.Initializers.AchievementInitializer.Load += OnAchievementInitializerLoad;
+
+					// Actually call AchievementInitializer.Load, which is also normally only done on clients.
+					AchievementInitializer.Load();
+				}
+				else
+				{
+					// If we don't have a Game instance, then we'll just remove the achievement tag handler entirely. This will cause the
+					// raw tag to just be used instead (and not be localized), but still avoid all the issues outlined above.
+					ChatManager._handlers.Remove("a", out _);
+					ChatManager._handlers.Remove("achievement", out _);
+				}
 
 				ModuleManager.Initialise(new object[] { this });
 
@@ -452,6 +498,19 @@ namespace TShockAPI
 			}
 		}
 
+		private static void RemoteClient_Reset(On.Terraria.RemoteClient.orig_Reset orig, RemoteClient client)
+		{
+			client.ClientUUID = null;
+			orig(client);
+		}
+
+		private static void OnAchievementInitializerLoad(ILContext il)
+		{
+			// Modify AchievementInitializer.Load to remove the Main.netMode == 2 check (occupies the first 4 IL instructions)
+			for (var i = 0; i < 4; i++)
+				il.Body.Instructions.RemoveAt(0);
+		}
+
 		protected void CrashReporter_HeapshotRequesting(object sender, EventArgs e)
 		{
 			foreach (TSPlayer player in TShock.Players)
@@ -472,6 +531,8 @@ namespace TShockAPI
 					Geo.Dispose();
 				}
 				SaveManager.Instance.Dispose();
+
+				IL.Terraria.Initializers.AchievementInitializer.Load -= OnAchievementInitializerLoad;
 
 				ModuleManager.Dispose();
 
@@ -623,13 +684,9 @@ namespace TShockAPI
 
 			if (args.Chest != null)
 			{
+				// After checking for protected regions, no further range checking is necessarily because the client packet only specifies the
+				// inventory slot to quick stack. The vanilla Terraria server itself determines what chests are close enough to the player.
 				if (Config.Settings.RegionProtectChests && !Regions.CanBuild((int)args.WorldPosition.X, (int)args.WorldPosition.Y, tsplr))
-				{
-					args.Handled = true;
-					return;
-				}
-
-				if (!tsplr.IsInRange(args.Chest.x, args.Chest.y))
 				{
 					args.Handled = true;
 					return;
@@ -1448,11 +1505,11 @@ namespace TShockAPI
 				{
 					if (!String.IsNullOrEmpty(text))
 					{
-						text = item.Key.Value + ' ' + text;
+						text = EnglishLanguage.GetCommandPrefixByName(item.Value._name) + ' ' + text;
 					}
 					else
 					{
-						text = item.Key.Value;
+						text = EnglishLanguage.GetCommandPrefixByName(item.Value._name);
 					}
 					break;
 				}
@@ -1663,7 +1720,7 @@ namespace TShockAPI
 			player.SendFileTextAsMessage(FileTools.MotdPath);
 
 			string pvpMode = Config.Settings.PvPMode.ToLowerInvariant();
-			if (pvpMode == "always")
+			if (pvpMode == "always" || pvpMode == "pvpwithnoteam")
 			{
 				player.TPlayer.hostile = true;
 				player.SendData(PacketTypes.TogglePvp, "", player.Index);
